@@ -214,7 +214,8 @@ class ExtraPackage
         $repoManager = $this->composer->getRepositoryManager();
         $newRepos = [];
 
-        foreach ($this->json['repositories'] as $repoJson) {
+        $namedIndex = false;
+        foreach ($this->json['repositories'] as $repoKey => $repoJson) {
             if (!isset($repoJson['type'])) {
                 continue;
             }
@@ -224,14 +225,20 @@ class ExtraPackage
                 $repoJson
             );
             $repoManager->prependRepository($repo);
-            $newRepos[] = $repo;
+
+            if (is_numeric($repoKey)) {
+                $newRepos[] = $repo;
+            } else {
+                // Indexed repository name.
+                $newRepos[$repoKey] = $repo;
+                $namedIndex = true;
+            }
         }
 
         $unwrapped = self::unwrapIfNeeded($root, 'setRepositories');
-        $unwrapped->setRepositories(array_merge(
-            $newRepos,
-            $root->getRepositories()
-        ));
+        $repositories = $root->getRepositories();
+        $repositories = $namedIndex ? ($newRepos + $repositories) : array_merge($newRepos, $repositories);
+        $unwrapped->setRepositories($repositories);
     }
 
     /**
